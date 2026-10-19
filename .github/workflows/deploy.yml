@@ -1,0 +1,52 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# Needed so GitHub can issue the short-lived token that AWS checks.
+permissions:
+  id-token: write
+  contents: read
+
+# Never run two deployments at once.
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: terraform
+    env:
+      TF_VAR_alert_email: ${{ secrets.ALERT_EMAIL }}
+      TF_VAR_slack_webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}
+      TF_VAR_jira_base_url: ${{ secrets.JIRA_BASE_URL }}
+      TF_VAR_jira_email: ${{ secrets.JIRA_EMAIL }}
+      TF_VAR_jira_api_token: ${{ secrets.JIRA_API_TOKEN }}
+    steps:
+      - name: Get the code
+        uses: actions/checkout@v4
+
+      - name: Sign in to AWS
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: us-east-1
+
+      - name: Install Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ">=1.10.0"
+
+      - name: Initialise
+        run: terraform init
+
+      - name: Validate
+        run: terraform validate
+
+      - name: Deploy
+        run: terraform apply -auto-approve
