@@ -1,0 +1,3 @@
+# Copy this file to terraform.tfvars and fill in your own values.
+# terraform.tfvars is ignored by git, so your real values stay on your computer.
+alert_email = "you@example.com"

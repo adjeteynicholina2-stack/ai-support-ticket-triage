@@ -1,0 +1,12 @@
+# Terraform working files and state (state can contain secrets)
+.terraform/
+*.tfstate
+*.tfstate.*
+crash.log
+
+# Real values, including Slack and Jira secrets
+*.tfvars
+!terraform.tfvars.example
+
+# Built Lambda zips
+build/
