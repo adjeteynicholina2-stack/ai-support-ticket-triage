@@ -5,12 +5,10 @@ on:
     branches: [main]
   workflow_dispatch:
 
-# Needed so GitHub can issue the short-lived token that AWS checks.
 permissions:
   id-token: write
   contents: read
 
-# Never run two deployments at once.
 concurrency:
   group: deploy
   cancel-in-progress: false
@@ -30,6 +28,20 @@ jobs:
     steps:
       - name: Get the code
         uses: actions/checkout@v4
+
+      # TEMPORARY: remove once the AWS sign-in works.
+      - name: Debug sign-in values
+        env:
+          ROLE: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+        run: |
+          if [ "$ROLE" = "arn:aws:iam::937492565038:role/github-deploy-ticket-triage" ]; then
+            echo "Secret check: match"
+          else
+            echo "Secret check: MISMATCH (length ${#ROLE})"
+          fi
+          TOKEN=$(curl -sS -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=sts.amazonaws.com" | python3 -c "import sys,json; print(json.load(sys.stdin)['value'])")
+          echo "::add-mask::$TOKEN"
+          echo "$TOKEN" | python3 -c "import sys,json,base64; p=sys.stdin.read().strip().split('.')[1]; p+='='*(-len(p)%4); d=json.loads(base64.urlsafe_b64decode(p)); print({k:d.get(k) for k in ['sub','aud','repository','ref']})"
 
       - name: Sign in to AWS
         uses: aws-actions/configure-aws-credentials@v4
